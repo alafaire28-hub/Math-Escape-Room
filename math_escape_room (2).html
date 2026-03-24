@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mathematician's Vault — Escape Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Oswald:wght@300;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #2a2a3e;
+    --gold: #c9a84c;
+    --gold-dim: #7a6130;
+    --red: #c0392b;
+    --green: #27ae60;
+    --text: #d4cfc6;
+    --dim: #6b6460;
+    --glow: rgba(201,168,76,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(42,42,62,0.3) 49px, rgba(42,42,62,0.3) 50px),
+      repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(42,42,62,0.3) 49px, rgba(42,42,62,0.3) 50px);
+  }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+
+  /* INTRO */
+  #intro {
+    text-align: center;
+    position: relative;
+  }
+
+  .vault-door {
+    width: 220px; height: 220px;
+    border: 4px solid var(--gold);
+    border-radius: 50%;
+    margin: 0 auto 30px;
+    position: relative;
+    box-shadow: 0 0 40px var(--glow), inset 0 0 40px var(--glow);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  .vault-door::before {
+    content: '';
+    position: absolute; inset: 12px;
+    border: 2px solid var(--gold-dim);
+    border-radius: 50%;
+  }
+  .vault-spokes {
+    position: absolute; inset: 0;
+    animation: spin 12s linear infinite;
+  }
+  .spoke {
+    position: absolute; top: 50%; left: 50%;
+    width: 90px; height: 3px;
+    background: var(--gold);
+    transform-origin: left center;
+    border-radius: 2px;
+  }
+  .vault-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 40px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    color: var(--bg);
+    font-weight: bold;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 40px var(--glow), inset 0 0 40px var(--glow); }
+    50% { box-shadow: 0 0 70px rgba(201,168,76,0.3), inset 0 0 70px rgba(201,168,76,0.3); }
+  }
+
+  h1.title {
+    font-family: 'Special Elite', cursive;
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px var(--gold-dim);
+  }
+  .subtitle {
+    font-size: 0.8rem;
+    color: var(--dim);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+  .flavor {
+    max-width: 500px;
+    line-height: 1.7;
+    color: #9a9490;
+    margin-bottom: 30px;
+    border-left: 2px solid var(--gold-dim);
+    padding-left: 16px;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    background: transparent;
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    padding: 14px 36px;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .btn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--glow);
+    transition: left 0.3s;
+  }
+  .btn:hover::before { left: 0; }
+  .btn:hover { box-shadow: 0 0 20px var(--glow); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-sm {
+    padding: 8px 20px;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+  }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    width: 100%; max-width: 600px;
+    margin: 0 auto 30px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .progress-track {
+    flex: 1; height: 4px;
+    background: var(--border);
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.6s ease;
+    box-shadow: 0 0 8px var(--gold);
+  }
+  .progress-label { color: var(--dim); font-size: 0.75rem; white-space: nowrap; }
+
+  /* PUZZLE SCREEN */
+  #puzzle {
+    padding: 20px;
+  }
+
+  .puzzle-header {
+    width: 100%; max-width: 700px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .puzzle-id {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    color: var(--dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .timer-display {
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 3px;
+  }
+  .timer-display.urgent { color: var(--red); animation: blink 0.8s infinite; }
+  @keyframes blink { 50% { opacity: 0.4; } }
+
+  .puzzle-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 32px;
+    max-width: 700px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5);
+  }
+  .puzzle-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .lock-number {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .puzzle-title {
+    font-family: 'Special Elite', cursive;
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .puzzle-flavor {
+    color: var(--dim);
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .puzzle-content {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 24px;
+    line-height: 1.9;
+    font-size: 0.9rem;
+  }
+
+  .math-block {
+    background: rgba(201,168,76,0.06);
+    border-left: 3px solid var(--gold-dim);
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .hint-box {
+    border: 1px dashed var(--gold-dim);
+    padding: 12px 16px;
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--dim);
+    display: none;
+  }
+  .hint-box.visible { display: block; }
+  .hint-label { color: var(--gold-dim); text-transform: uppercase; letter-spacing: 2px; font-size: 0.7rem; margin-bottom: 4px; }
+
+  .input-row {
+    display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .code-input {
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--border);
+    color: var(--gold);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.5rem;
+    padding: 12px 20px;
+    letter-spacing: 6px;
+    width: 180px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .code-input:focus { border-color: var(--gold); box-shadow: 0 0 12px var(--glow); }
+  .code-input.wrong { border-color: var(--red); animation: shake 0.4s; }
+  .code-input.correct { border-color: var(--green); box-shadow: 0 0 20px rgba(39,174,96,0.3); }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    60% { transform: translateX(6px); }
+  }
+
+  .feedback {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding: 8px 0;
+    min-height: 24px;
+  }
+  .feedback.ok { color: var(--green); }
+  .feedback.fail { color: var(--red); }
+
+  .action-row {
+    display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .hint-count { font-size: 0.75rem; color: var(--dim); }
+
+  /* SUCCESS FLASH */
+  .success-flash {
+    position: fixed; inset: 0;
+    background: rgba(39,174,96,0.08);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 100;
+  }
+  .success-flash.show { opacity: 1; }
+
+  /* FINAL SCREEN */
+  #final { text-align: center; }
+  .trophy {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: float 2s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .final-title {
+    font-family: 'Special Elite', cursive;
+    font-size: 2.2rem;
+    color: var(--gold);
+    margin-bottom: 12px;
+    text-shadow: 0 0 30px var(--gold-dim);
+  }
+  .final-time {
+    font-size: 2rem;
+    color: var(--gold);
+    letter-spacing: 6px;
+    margin: 20px 0;
+    border: 1px solid var(--gold-dim);
+    display: inline-block;
+    padding: 12px 32px;
+  }
+  .final-stats {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; max-width: 360px; margin: 24px auto;
+  }
+  .stat-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+  .stat-label { font-size: 0.65rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+  .stat-val { font-size: 1.4rem; color: var(--gold); margin-top: 4px; }
+
+  /* ANSWER SHEET MODAL */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--gold-dim);
+    max-width: 560px;
+    width: 100%;
+    padding: 32px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-family: 'Special Elite', cursive;
+    color: var(--gold);
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+  }
+  .answer-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.85rem;
+  }
+  .answer-row:last-child { border-bottom: none; }
+  .ans-puzzle { color: var(--dim); }
+  .ans-code { color: var(--gold); font-size: 1.1rem; letter-spacing: 3px; }
+  .close-btn {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--dim);
+    cursor: pointer; font-size: 1.2rem; font-family: monospace;
+  }
+  .close-btn:hover { color: var(--gold); }
+
+  .teacher-btn {
+    position: fixed; bottom: 16px; right: 16px;
+    z-index: 50;
+  }
+
+  /* Separator */
+  hr.gold { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  @media (max-width: 520px) {
+    .puzzle-card { padding: 20px 16px; }
+    .final-stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="success-flash" id="flash"></div>
+
+<!-- TEACHER ANSWER SHEET -->
+<div class="overlay" id="answerOverlay">
+  <div class="modal">
+    <button class="close-btn" onclick="closeAnswers()">✕</button>
+    <h2>📋 Teacher Answer Sheet</h2>
+    <p style="color:var(--dim);font-size:0.78rem;margin-bottom:20px;">Share this with students ONLY after the game, or use to set up / verify.</p>
+    <div id="answerList"></div>
+  </div>
+</div>
+
+<!-- INTRO SCREEN -->
+<div class="screen active" id="intro">
+  <div class="vault-door">
+    <div class="vault-spokes">
+      <div class="spoke" style="transform:rotate(0deg)"></div>
+      <div class="spoke" style="transform:rotate(60deg)"></div>
+      <div class="spoke" style="transform:rotate(120deg)"></div>
+      <div class="spoke" style="transform:rotate(180deg)"></div>
+      <div class="spoke" style="transform:rotate(240deg)"></div>
+      <div class="spoke" style="transform:rotate(300deg)"></div>
+    </div>
+    <div class="vault-center">π</div>
+  </div>
+
+  <h1 class="title">The Mathematician's Vault</h1>
+  <div class="subtitle">An Escape Room · 5 Puzzles</div>
+
+  <p class="flavor">
+    Professor Euler's vault has been sealed by his own equations. To unlock it, you must solve five mathematical locks — each guarding a piece of the master code. You have 30 minutes. The math is the key.
+  </p>
+
+  <div style="margin-bottom:24px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn" onclick="startGame()">Begin · Open the Vault</button>
+    <button class="btn btn-sm" onclick="openAnswers()">Teacher Mode</button>
+  </div>
+  <div style="color:var(--dim);font-size:0.75rem;letter-spacing:2px;">ALGEBRA · GEOMETRY · SYSTEMS · STATISTICS · QUADRATICS</div>
+</div>
+
+<!-- PUZZLE SCREEN -->
+<div class="screen" id="puzzle">
+  <div class="puzzle-header" style="max-width:700px;width:100%;">
+    <div>
+      <div class="puzzle-id" id="puzzleId">LOCK 1 OF 5</div>
+      <div style="font-size:0.75rem;color:var(--dim);" id="puzzleTopic">ALGEBRA</div>
+    </div>
+    <div class="timer-display" id="timerDisplay">30:00</div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-label" id="progressLabel">0 / 5 unlocked</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="puzzle-card">
+    <div class="lock-number" id="lockNum">— LOCK ONE —</div>
+    <div class="puzzle-title" id="puzzleTitle">Loading…</div>
+    <div class="puzzle-flavor" id="puzzleFlavor"></div>
+    <div class="puzzle-content" id="puzzleContent"></div>
+
+    <div class="hint-box" id="hintBox">
+      <div class="hint-label">💡 Hint</div>
+      <div id="hintText"></div>
+    </div>
+
+    <hr class="gold">
+
+    <div class="input-row">
+      <input class="code-input" type="number" id="answerInput" placeholder="????">
+      <button class="btn btn-sm" onclick="checkAnswer()">Unlock →</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="action-row">
+      <button class="btn btn-sm" onclick="useHint()" id="hintBtn">Use Hint</button>
+      <div class="hint-count" id="hintCount">Hints used: 0 (−30s each)</div>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL SCREEN -->
+<div class="screen" id="final">
+  <div class="trophy">🏆</div>
+  <div class="final-title">Vault Unlocked!</div>
+  <p style="color:var(--dim);max-width:400px;margin:0 auto 20px;font-size:0.85rem;line-height:1.7;">
+    Outstanding work! Professor Euler's vault is open. All five mathematical locks have been defeated.
+  </p>
+  <div class="final-time" id="finalTime">00:00</div>
+  <div class="final-stats">
+    <div class="stat-box">
+      <div class="stat-label">Puzzles</div>
+      <div class="stat-val">5 / 5</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Hints Used</div>
+      <div class="stat-val" id="finalHints">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Wrong Guesses</div>
+      <div class="stat-val" id="finalWrong">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Rating</div>
+      <div class="stat-val" id="finalRating">—</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn" onclick="restartGame()">Play Again</button>
+    <button class="btn btn-sm" onclick="openAnswers()">Answer Sheet</button>
+  </div>
+</div>
+
+<button class="btn btn-sm teacher-btn" onclick="openAnswers()" id="teacherFloatBtn" style="display:none;">📋 Answers</button>
+
+<script>
+const PUZZLES = [
+  {
+    id: 1,
+    title: "The Linear Lock",
+    topic: "Algebra — Linear Equations",
+    flavor: "The first lock bears a message scratched into the brass: 'Find x, and you find the way.'",
+    content: `The inscription on the lock reads:
+
+<div class="math-block">
+  "Three times a number, increased by 7, equals the number plus 19."
+</div>
+
+Solve for <strong>x</strong>. The lock code is <strong>x</strong>.
+
+<br><br>
+Set up and solve the equation:<br>
+3x + 7 = x + 19`,
+    hint: "Move all x terms to one side: subtract x from both sides. Then subtract 7 from both sides. You should get 2x = 12.",
+    answer: 6
+  },
+  {
+    id: 2,
+    title: "The Geometry Gate",
+    topic: "Geometry — Area & Perimeter",
+    flavor: "A bronze plaque on the gate shows a rectangle with strange markings.",
+    content: `The gate shows a rectangle. An engraved note reads:
+
+<div class="math-block">
+  Width = (x) cm &nbsp;&nbsp; Length = (x + 4) cm<br>
+  The <em>perimeter</em> of the rectangle is 28 cm.
+</div>
+
+Find the <strong>width</strong> (value of x) of the rectangle. <br>
+The lock code is the <strong>width in cm</strong>.
+
+<br><br>
+Recall: Perimeter of a rectangle = 2(length + width)`,
+    hint: "Set up: 2(x + x + 4) = 28. Simplify inside: 2(2x + 4) = 28. Divide both sides by 2: 2x + 4 = 14.",
+    answer: 5
+  },
+  {
+    id: 3,
+    title: "The System Cipher",
+    topic: "Algebra — Systems of Equations",
+    flavor: "Two dials. Two equations. One solution.",
+    content: `The cipher lock has two spinning dials. The mechanism requires you to solve this system:
+
+<div class="math-block">
+  x + y = 11<br>
+  x − y = 3
+</div>
+
+Find the value of <strong>x</strong>. Enter <strong>x</strong> as the code.
+
+<br><br>
+<em>Tip: Try adding the two equations together.</em>`,
+    hint: "Add both equations: (x + y) + (x − y) = 11 + 3 → 2x = 14 → x = 7. Then find y if you're curious!",
+    answer: 7
+  },
+  {
+    id: 4,
+    title: "The Statistical Safe",
+    topic: "Statistics — Mean (Average)",
+    flavor: "A logbook lies open. Five test scores have been partially erased.",
+    content: `Professor Euler's logbook shows 5 test scores. One score is missing:
+
+<div class="math-block">
+  Scores: 82, 90, 78, ?, 95<br>
+  The <em>mean</em> (average) of all five scores is <strong>86</strong>.
+</div>
+
+Find the <strong>missing score</strong>. That score is the lock code.
+
+<br><br>
+Recall: Mean = (Sum of all values) ÷ (Number of values)`,
+    hint: "Total sum must equal 86 × 5 = 430. Add the known scores: 82 + 90 + 78 + 95 = 345. Subtract: 430 − 345 = ?",
+    answer: 85
+  },
+  {
+    id: 5,
+    title: "The Quadratic Keyhole",
+    topic: "Algebra — Quadratic Equations (Factoring)",
+    flavor: "The final lock. The hardest one. A golden equation is etched into the vault door.",
+    content: `The vault door bears this final equation in golden letters:
+
+<div class="math-block">
+  x² − 7x + 10 = 0
+</div>
+
+The equation has two solutions. The lock code is the <strong>larger</strong> of the two values of <strong>x</strong>.
+
+<br><br>
+<em>Factor the quadratic: find two numbers that multiply to 10 and add to −7.</em>`,
+    hint: "Factor: (x − 2)(x − 5) = 0, so x = 2 or x = 5. The LARGER value opens the vault.",
+    answer: 5
+  }
+];
+
+let currentPuzzle = 0;
+let hintsUsed = 0;
+let wrongGuesses = 0;
+let timerInterval = null;
+let secondsLeft = 1800;
+let startTime = null;
+let elapsedSeconds = 0;
+
+function startGame() {
+  showScreen('puzzle');
+  currentPuzzle = 0;
+  hintsUsed = 0;
+  wrongGuesses = 0;
+  secondsLeft = 1800;
+  startTime = Date.now();
+  loadPuzzle(0);
+  startTimer();
+  document.getElementById('teacherFloatBtn').style.display = 'block';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function loadPuzzle(idx) {
+  const p = PUZZLES[idx];
+  document.getElementById('puzzleId').textContent = `LOCK ${idx + 1} OF 5`;
+  document.getElementById('puzzleTopic').textContent = p.topic;
+  document.getElementById('lockNum').textContent = `— LOCK ${['ONE','TWO','THREE','FOUR','FIVE'][idx]} —`;
+  document.getElementById('puzzleTitle').textContent = p.title;
+  document.getElementById('puzzleFlavor').textContent = p.flavor;
+  document.getElementById('puzzleContent').innerHTML = p.content;
+  document.getElementById('hintText').textContent = p.hint;
+  document.getElementById('answerInput').value = '';
+  document.getElementById('answerInput').className = 'code-input';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('hintBox').classList.remove('visible');
+  updateProgress(idx);
+}
+
+function updateProgress(solved) {
+  const pct = (solved / 5) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${solved} / 5 unlocked`;
+}
+
+function checkAnswer() {
+  const input = document.getElementById('answerInput');
+  const val = parseInt(input.value);
+  const correct = PUZZLES[currentPuzzle].answer;
+  const fb = document.getElementById('feedback');
+
+  if (isNaN(val)) {
+    fb.textContent = 'Enter a number.';
+    fb.className = 'feedback fail';
+    return;
+  }
+
+  if (val === correct) {
+    input.classList.add('correct');
+    fb.textContent = '✓ CORRECT — Lock disengaged!';
+    fb.className = 'feedback ok';
+    flashScreen();
+    currentPuzzle++;
+    updateProgress(currentPuzzle);
+    setTimeout(() => {
+      if (currentPuzzle >= PUZZLES.length) {
+        endGame();
+      } else {
+        loadPuzzle(currentPuzzle);
+      }
+    }, 1200);
+  } else {
+    wrongGuesses++;
+    input.classList.add('wrong');
+    fb.textContent = `✗ Incorrect — try again.`;
+    fb.className = 'feedback fail';
+    setTimeout(() => input.classList.remove('wrong'), 500);
+  }
+}
+
+document.getElementById('answerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkAnswer();
+});
+
+function useHint() {
+  hintsUsed++;
+  secondsLeft = Math.max(0, secondsLeft - 30);
+  document.getElementById('hintBox').classList.add('visible');
+  document.getElementById('hintCount').textContent = `Hints used: ${hintsUsed} (−30s each)`;
+}
+
+function flashScreen() {
+  const f = document.getElementById('flash');
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 400);
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    const display = document.getElementById('timerDisplay');
+    display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    display.classList.toggle('urgent', secondsLeft <= 120);
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      endGame(true);
+    }
+  }, 1000);
+}
+
+function endGame(outOfTime = false) {
+  clearInterval(timerInterval);
+  elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+  const m = Math.floor(elapsedSeconds / 60);
+  const s = elapsedSeconds % 60;
+  document.getElementById('finalTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('finalHints').textContent = hintsUsed;
+  document.getElementById('finalWrong').textContent = wrongGuesses;
+
+  // Rating
+  let rating = '⭐⭐⭐⭐⭐';
+  if (hintsUsed > 2 || wrongGuesses > 5) rating = '⭐⭐⭐⭐';
+  if (hintsUsed > 4 || wrongGuesses > 10) rating = '⭐⭐⭐';
+  if (outOfTime) rating = '⏰ Time!';
+  document.getElementById('finalRating').textContent = rating;
+
+  showScreen('final');
+  document.getElementById('teacherFloatBtn').style.display = 'none';
+}
+
+function restartGame() {
+  showScreen('intro');
+  document.getElementById('teacherFloatBtn').style.display = 'none';
+}
+
+// Teacher answer sheet
+function openAnswers() {
+  const list = document.getElementById('answerList');
+  list.innerHTML = PUZZLES.map(p => `
+    <div class="answer-row">
+      <span class="ans-puzzle">${p.id}. ${p.title}</span>
+      <span class="ans-code">${p.answer}</span>
+    </div>
+  `).join('');
+  document.getElementById('answerOverlay').classList.add('open');
+}
+function closeAnswers() {
+  document.getElementById('answerOverlay').classList.remove('open');
+}
+
+// Pre-populate answer sheet
+window.onload = () => openAnswers() & closeAnswers();
+</script>
+</body>
+</html>
